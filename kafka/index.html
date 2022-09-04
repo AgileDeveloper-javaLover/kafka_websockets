@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="ISO-8859-1">
+    <title>Home</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js" integrity="sha512-1QvjE7BtotQjkq8PxLeF6P46gEpBRXuskzIVgjFpekzFVF4yjRgrQvTG1MTOJ3yQgvTteKAcO7DSZI92+u/yZw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js" integrity="sha512-iKDtgDyTHjAitUDdLljGhenhPwrbBfqTKWO1mkhSFH3A7blITC9MhYon6SjnMhp4o0rADGw9yAC6EW4t5a4K3g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script type="text/javascript">
+
+/* Document Ready Event */
+$(document).ready(function() {
+    closeConetion()
+});
+    
+    
+    var stompClient = null;
+
+    function openConnection (){
+
+
+        // $.ajax(
+        //     {
+        //         url: "http://localhost:8080/get-history", 
+        //         success: function(result){
+        //             var output = "";
+        //         for (i = 0; i < result.length; ++i) {
+        //                 output += result[i]+"</br>";
+        //         }
+        //         $("#data").html(output);
+        //         }
+        //     });
+
+        var socket = new SockJS('http://localhost:8080/live-todo');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            stompClient.subscribe('/topic/todo', function(data) {
+                // var all = JSON.parse(data.body)
+                // var output = "";
+                // console.log(all)
+                // for (i = 0; i < all.length; ++i) {
+                //         output += all[i]+"</br>";
+                // }
+                // $("#data").html(output);
+                $("#data").append('<div>'+data.body + "</div></br>");
+            });
+        });
+
+        $.ajax(
+        {
+            url: "http://localhost:8080/kafka/start", 
+            success: function(){
+                $("#status").html('Status : <span class="bg-success text-white px-2 py-1 rounded-pill">Started</span>');
+            }
+        });
+
+        
+    }
+
+    function closeConetion(){
+        $.ajax(
+        {
+            url: "http://localhost:8080/kafka/end", 
+            success: function(){
+                if(stompClient != null){
+                    stompClient.disconnect();
+                    $("#status").html('Status : <span class="bg-danger text-white px-2 py-1 rounded-pill">Closed</span>');
+                }
+            }
+        });
+        
+    }
+
+
+function sendMessage(e){
+    e.preventDefault();
+    var message = $("#input").val();
+    if(message != null && message != ""){
+        $.ajax(
+        {
+            url: "http://localhost:8080/api/send?message="+message, 
+            success: function(){
+                $("#input").val("");
+            }
+        });
+    }
+    
+}
+
+</script>
+</head>
+<body>
+    <div class="m-5">
+        
+        <button class="btn btn-success rounded" onclick="openConnection()" >open</button>
+        <button class="btn btn-danger rounded"  onclick="closeConetion()" >close</button></br>
+        <div class="my-2" id="status">Status : <span class="bg-danger text-white px-2 py-1 rounded-pill">Closed</span></div>
+
+        <form onsubmit="return  sendMessage(event)">
+            <input placeholder="Enter message" type="text" style="max-width: 300px;" id="input" class=" form-control mt-1 mb-2"> <button class="btn btn-primary btn-sm" id="send-btn" type="submit">send</button>
+        </form>
+        
+            <div id="data"></div>
+    </div>
+</body>
+</html>
